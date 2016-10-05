@@ -35,9 +35,7 @@ class ConsoleScheduledEventTest extends PHPUnit_Framework_TestCase
         $event = new Event('php foo');
         $this->assertEquals('* * * * * *', $event->getExpression());
         $this->assertTrue($event->isDue($app));
-        $this->assertFalse($event->skip(function () {
-            return true;
-        })->isDue($app));
+        $this->assertFalse($event->skip(function () { return true; })->isDue($app));
 
         $event = new Event('php foo');
         $this->assertEquals('* * * * * *', $event->getExpression());
@@ -45,9 +43,7 @@ class ConsoleScheduledEventTest extends PHPUnit_Framework_TestCase
 
         $event = new Event('php foo');
         $this->assertEquals('* * * * * *', $event->getExpression());
-        $this->assertFalse($event->when(function () {
-            return false;
-        })->isDue($app));
+        $this->assertFalse($event->when(function () { return false; })->isDue($app));
 
         $event = new Event('php foo');
         $this->assertEquals('*/5 * * * * *', $event->everyFiveMinutes()->getExpression());

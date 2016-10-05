@@ -3,25 +3,27 @@
 use Mockery as m;
 use Illuminate\Container\Container;
 
-class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
+class FoundationFormRequestTestCase extends PHPUnit_Framework_TestCase
 {
     public function tearDown()
     {
         m::close();
+        unset($_SERVER['__request.validated']);
     }
 
     public function testValidateFunctionRunsValidatorOnSpecifiedRules()
     {
         $request = FoundationTestFormRequestStub::create('/', 'GET', ['name' => 'abigail']);
-        $request->setContainer($container = new Container);
+        $request->setContainer(new Container);
         $factory = m::mock('Illuminate\Validation\Factory');
-        $factory->shouldReceive('make')->once()->with(['name' => 'abigail'], ['name' => 'required'], [], [])->andReturn(
+        $factory->shouldReceive('make')->once()->with(['name' => 'abigail'], ['name' => 'required'])->andReturn(
             $validator = m::mock('Illuminate\Validation\Validator')
         );
-        $container->instance('Illuminate\Contracts\Validation\Factory', $factory);
-        $validator->shouldReceive('passes')->once()->andReturn(true);
+        $validator->shouldReceive('fails')->once()->andReturn(false);
 
         $request->validate($factory);
+
+        $this->assertTrue($_SERVER['__request.validated']);
     }
 
     /**
@@ -31,15 +33,14 @@ class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
     {
         $request = m::mock('FoundationTestFormRequestStub[response]');
         $request->initialize(['name' => null]);
-        $request->setContainer($container = new Container);
+        $request->setContainer(new Container);
         $factory = m::mock('Illuminate\Validation\Factory');
-        $factory->shouldReceive('make')->once()->with(['name' => null], ['name' => 'required'], [], [])->andReturn(
+        $factory->shouldReceive('make')->once()->with(['name' => null], ['name' => 'required'])->andReturn(
             $validator = m::mock('Illuminate\Validation\Validator')
         );
-        $container->instance('Illuminate\Contracts\Validation\Factory', $factory);
-        $validator->shouldReceive('passes')->once()->andReturn(false);
-        $validator->shouldReceive('getMessageBag')->once()->andReturn($messages = m::mock('Illuminate\Support\MessageBag'));
-        $messages->shouldReceive('toArray')->once()->andReturn(['name' => ['Name required']]);
+        $validator->shouldReceive('fails')->once()->andReturn(true);
+        $validator->shouldReceive('errors')->once()->andReturn($messages = m::mock('StdClass'));
+        $messages->shouldReceive('all')->once()->andReturn([]);
         $request->shouldReceive('response')->once()->andReturn(new Illuminate\Http\Response);
 
         $request->validate($factory);
@@ -52,13 +53,12 @@ class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
     {
         $request = m::mock('FoundationTestFormRequestForbiddenStub[forbiddenResponse]');
         $request->initialize(['name' => null]);
-        $request->setContainer($container = new Container);
+        $request->setContainer(new Container);
         $factory = m::mock('Illuminate\Validation\Factory');
-        $factory->shouldReceive('make')->once()->with(['name' => null], ['name' => 'required'], [], [])->andReturn(
+        $factory->shouldReceive('make')->once()->with(['name' => null], ['name' => 'required'])->andReturn(
             $validator = m::mock('Illuminate\Validation\Validator')
         );
-        $container->instance('Illuminate\Contracts\Validation\Factory', $factory);
-        $validator->shouldReceive('passes')->never();
+        $validator->shouldReceive('fails')->once()->andReturn(false);
         $request->shouldReceive('forbiddenResponse')->once()->andReturn(new Illuminate\Http\Response);
 
         $request->validate($factory);
@@ -72,7 +72,7 @@ class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
         $redirector->shouldReceive('getUrlGenerator')->andReturn($url = m::mock('StdClass'));
         $url->shouldReceive('previous')->once()->andReturn('previous');
         $response->shouldReceive('withInput')->andReturn($response);
-        $response->shouldReceive('withErrors')->with(['errors'], 'default')->andReturn($response);
+        $response->shouldReceive('withErrors')->with(['errors'])->andReturn($response);
 
         $request->response(['errors']);
     }
@@ -80,14 +80,19 @@ class FoundationFormRequestTest extends PHPUnit_Framework_TestCase
 
 class FoundationTestFormRequestStub extends Illuminate\Foundation\Http\FormRequest
 {
-    public function rules()
+    public function rules(StdClass $dep)
     {
         return ['name' => 'required'];
     }
 
-    public function authorize()
+    public function authorize(StdClass $dep)
     {
         return true;
+    }
+
+    public function validated(StdClass $dep)
+    {
+        $_SERVER['__request.validated'] = true;
     }
 }
 

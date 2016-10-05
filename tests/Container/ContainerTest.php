@@ -7,21 +7,15 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testClosureResolution()
     {
         $container = new Container;
-        $container->bind('name', function () {
-            return 'Taylor';
-        });
+        $container->bind('name', function () { return 'Taylor'; });
         $this->assertEquals('Taylor', $container->make('name'));
     }
 
     public function testBindIfDoesntRegisterIfServiceAlreadyRegistered()
     {
         $container = new Container;
-        $container->bind('name', function () {
-            return 'Taylor';
-        });
-        $container->bindIf('name', function () {
-            return 'Dayle';
-        });
+        $container->bind('name', function () { return 'Taylor'; });
+        $container->bindIf('name', function () { return 'Dayle'; });
 
         $this->assertEquals('Taylor', $container->make('name'));
     }
@@ -30,9 +24,7 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     {
         $container = new Container;
         $class = new stdClass;
-        $container->singleton('class', function () use ($class) {
-            return $class;
-        });
+        $container->singleton('class', function () use ($class) { return $class; });
         $this->assertSame($class, $container->make('class'));
     }
 
@@ -45,9 +37,7 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testSlashesAreHandled()
     {
         $container = new Container;
-        $container->bind('\Foo', function () {
-            return 'hello';
-        });
+        $container->bind('\Foo', function () { return 'hello'; });
         $this->assertEquals('hello', $container->make('Foo'));
     }
 
@@ -90,9 +80,7 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testContainerIsPassedToResolvers()
     {
         $container = new Container;
-        $container->bind('something', function ($c) {
-            return $c;
-        });
+        $container->bind('something', function ($c) { return $c; });
         $c = $container->make('something');
         $this->assertSame($c, $container);
     }
@@ -100,9 +88,7 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testArrayAccess()
     {
         $container = new Container;
-        $container['something'] = function () {
-            return 'foo';
-        };
+        $container['something'] = function () { return 'foo'; };
         $this->assertTrue(isset($container['something']));
         $this->assertEquals('foo', $container['something']);
         unset($container['something']);
@@ -114,13 +100,9 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
         $container = new Container;
         $container['foo'] = 'bar';
         $container->alias('foo', 'baz');
-        $container->alias('baz', 'bat');
         $this->assertEquals('bar', $container->make('foo'));
         $this->assertEquals('bar', $container->make('baz'));
-        $this->assertEquals('bar', $container->make('bat'));
-        $container->bind(['bam' => 'boom'], function () {
-            return 'pow';
-        });
+        $container->bind(['bam' => 'boom'], function () { return 'pow'; });
         $this->assertEquals('pow', $container->make('bam'));
         $this->assertEquals('pow', $container->make('boom'));
         $container->instance(['zoom' => 'zing'], 'wow');
@@ -131,9 +113,7 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testShareMethod()
     {
         $container = new Container;
-        $closure = $container->share(function () {
-            return new stdClass;
-        });
+        $closure = $container->share(function () { return new stdClass; });
         $class1 = $closure($container);
         $class2 = $closure($container);
         $this->assertSame($class1, $class2);
@@ -193,25 +173,18 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testExtendInstancesArePreserved()
     {
         $container = new Container;
-        $container->bind('foo', function () {
-            $obj = new StdClass;
-            $obj->foo = 'bar';
+        $container->bind('foo', function () { $obj = new StdClass; $obj->foo = 'bar';
 
-            return $obj;
-        });
+return $obj; });
         $obj = new StdClass;
         $obj->foo = 'foo';
         $container->instance('foo', $obj);
-        $container->extend('foo', function ($obj, $container) {
-            $obj->bar = 'baz';
+        $container->extend('foo', function ($obj, $container) { $obj->bar = 'baz';
 
-            return $obj;
-        });
-        $container->extend('foo', function ($obj, $container) {
-            $obj->baz = 'foo';
+return $obj; });
+        $container->extend('foo', function ($obj, $container) { $obj->baz = 'foo';
 
-            return $obj;
-        });
+return $obj; });
         $this->assertEquals('foo', $container->make('foo')->foo);
     }
 
@@ -219,11 +192,9 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     {
         $container = new Container;
         $container->bind('ContainerLazyExtendStub');
-        $container->extend('ContainerLazyExtendStub', function ($obj, $container) {
-            $obj->init();
+        $container->extend('ContainerLazyExtendStub', function ($obj, $container) { $obj->init();
 
-            return $obj;
-        });
+return $obj; });
         $this->assertFalse(ContainerLazyExtendStub::$initialized);
         $container->make('ContainerLazyExtendStub');
         $this->assertTrue(ContainerLazyExtendStub::$initialized);
@@ -261,12 +232,8 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testResolvingCallbacksAreCalledForSpecificAbstracts()
     {
         $container = new Container;
-        $container->resolving('foo', function ($object) {
-            return $object->name = 'taylor';
-        });
-        $container->bind('foo', function () {
-            return new StdClass;
-        });
+        $container->resolving('foo', function ($object) { return $object->name = 'taylor'; });
+        $container->bind('foo', function () { return new StdClass; });
         $instance = $container->make('foo');
 
         $this->assertEquals('taylor', $instance->name);
@@ -275,12 +242,8 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testResolvingCallbacksAreCalled()
     {
         $container = new Container;
-        $container->resolving(function ($object) {
-            return $object->name = 'taylor';
-        });
-        $container->bind('foo', function () {
-            return new StdClass;
-        });
+        $container->resolving(function ($object) { return $object->name = 'taylor'; });
+        $container->bind('foo', function () { return new StdClass; });
         $instance = $container->make('foo');
 
         $this->assertEquals('taylor', $instance->name);
@@ -289,12 +252,8 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testResolvingCallbacksAreCalledForType()
     {
         $container = new Container;
-        $container->resolving('StdClass', function ($object) {
-            return $object->name = 'taylor';
-        });
-        $container->bind('foo', function () {
-            return new StdClass;
-        });
+        $container->resolving('StdClass', function ($object) { return $object->name = 'taylor'; });
+        $container->bind('foo', function () { return new StdClass; });
         $instance = $container->make('foo');
 
         $this->assertEquals('taylor', $instance->name);
@@ -309,28 +268,14 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
         $this->assertFalse($container->bound('object'));
     }
 
-    public function testBoundInstanceAndAliasCheckViaArrayAccess()
-    {
-        $container = new Container;
-        $container->instance('object', new StdClass);
-        $container->alias('object', 'alias');
-
-        $this->assertTrue(isset($container['object']));
-        $this->assertTrue(isset($container['alias']));
-    }
-
     public function testReboundListeners()
     {
         unset($_SERVER['__test.rebind']);
 
         $container = new Container;
-        $container->bind('foo', function () {
-        });
-        $container->rebinding('foo', function () {
-            $_SERVER['__test.rebind'] = true;
-        });
-        $container->bind('foo', function () {
-        });
+        $container->bind('foo', function () {});
+        $container->rebinding('foo', function () { $_SERVER['__test.rebind'] = true; });
+        $container->bind('foo', function () {});
 
         $this->assertTrue($_SERVER['__test.rebind']);
     }
@@ -340,13 +285,9 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
         unset($_SERVER['__test.rebind']);
 
         $container = new Container;
-        $container->instance('foo', function () {
-        });
-        $container->rebinding('foo', function () {
-            $_SERVER['__test.rebind'] = true;
-        });
-        $container->instance('foo', function () {
-        });
+        $container->instance('foo', function () {});
+        $container->rebinding('foo', function () { $_SERVER['__test.rebind'] = true; });
+        $container->instance('foo', function () {});
 
         $this->assertTrue($_SERVER['__test.rebind']);
     }
@@ -558,9 +499,7 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testContainerFlushFlushesAllBindingsAliasesAndResolvedInstances()
     {
         $container = new Container;
-        $container->bind('ConcreteStub', function () {
-            return new ContainerConcreteStub;
-        }, true);
+        $container->bind('ConcreteStub', function () { return new ContainerConcreteStub; }, true);
         $container->alias('ConcreteStub', 'ContainerConcreteStub');
         $concreteStubInstance = $container->make('ConcreteStub');
         $this->assertTrue($container->resolved('ConcreteStub'));
@@ -577,9 +516,7 @@ class ContainerContainerTest extends PHPUnit_Framework_TestCase
     public function testResolvedResolvesAliasToBindingNameBeforeChecking()
     {
         $container = new Container;
-        $container->bind('ConcreteStub', function () {
-            return new ContainerConcreteStub;
-        }, true);
+        $container->bind('ConcreteStub', function () { return new ContainerConcreteStub; }, true);
         $container->alias('ConcreteStub', 'foo');
 
         $this->assertFalse($container->resolved('ConcreteStub'));
