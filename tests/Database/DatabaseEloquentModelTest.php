@@ -794,6 +794,18 @@ class DatabaseEloquentModelTest extends PHPUnit_Framework_TestCase
         Model::reguard();
     }
 
+    public function testUnguardedCallDoesNotChangeUnguardedStateOnException()
+    {
+        try {
+            Model::unguarded(function () {
+                throw new Exception;
+            });
+        } catch (Exception $e) {
+            // ignore the exception
+        }
+        $this->assertFalse(Model::isUnguarded());
+    }
+
     public function testHasOneCreatesProperRelation()
     {
         $model = new EloquentModelStub;
@@ -1270,6 +1282,18 @@ class DatabaseEloquentModelTest extends PHPUnit_Framework_TestCase
     {
         $model = new EloquentModelStub;
         $this->assertFalse($model->update());
+    }
+
+    public function testIssetBehavesCorrectlyWithAttributesAndRelationships()
+    {
+        $model = new EloquentModelStub;
+        $this->assertFalse(isset($model->nonexistent));
+
+        $model->some_attribute = 'some_value';
+        $this->assertTrue(isset($model->some_attribute));
+
+        $model->setRelation('some_relation', 'some_value');
+        $this->assertTrue(isset($model->some_relation));
     }
 
     protected function addMockConnection($model)
