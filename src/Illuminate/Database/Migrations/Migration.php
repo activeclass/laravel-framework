@@ -20,4 +20,14 @@ abstract class Migration
     {
         return $this->connection;
     }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+
+    }
 }
