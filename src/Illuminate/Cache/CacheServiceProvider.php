@@ -2,19 +2,12 @@
 
 namespace Illuminate\Cache;
 
+use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Cache\Console\ClearCommand;
-use Illuminate\Cache\Console\ForgetCommand;
+use Symfony\Component\Cache\Adapter\Psr16Adapter;
 
-class CacheServiceProvider extends ServiceProvider
+class CacheServiceProvider extends ServiceProvider implements DeferrableProvider
 {
-    /**
-     * Indicates if loading of the provider is deferred.
-     *
-     * @var bool
-     */
-    protected $defer = true;
-
     /**
      * Register the service provider.
      *
@@ -30,31 +23,19 @@ class CacheServiceProvider extends ServiceProvider
             return $app['cache']->driver();
         });
 
+        $this->app->singleton('cache.psr6', function ($app) {
+            return new Psr16Adapter($app['cache.store']);
+        });
+
         $this->app->singleton('memcached.connector', function () {
             return new MemcachedConnector;
         });
 
-        $this->registerCommands();
-    }
-
-    /**
-     * Register the cache related console commands.
-     *
-     * @return void
-     */
-    public function registerCommands()
-    {
-        $this->app->singleton('command.cache.clear', function ($app) {
-            return new ClearCommand($app['cache']);
+        $this->app->singleton(RateLimiter::class, function ($app) {
+            return new RateLimiter($app->make('cache')->driver(
+                $app['config']->get('cache.limiter')
+            ));
         });
-
-        $this->commands('command.cache.clear');
-
-        $this->app->singleton('command.cache.forget', function ($app) {
-            return new ForgetCommand($app['cache']);
-        });
-
-        $this->commands('command.cache.forget');
     }
 
     /**
@@ -65,8 +46,7 @@ class CacheServiceProvider extends ServiceProvider
     public function provides()
     {
         return [
-            'cache', 'cache.store', 'memcached.connector',
-            'command.cache.clear', 'command.cache.forget',
+            'cache', 'cache.store', 'cache.psr6', 'memcached.connector', RateLimiter::class,
         ];
     }
 }

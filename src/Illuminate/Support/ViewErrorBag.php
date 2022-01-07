@@ -5,6 +5,9 @@ namespace Illuminate\Support;
 use Countable;
 use Illuminate\Contracts\Support\MessageBag as MessageBagContract;
 
+/**
+ * @mixin \Illuminate\Contracts\Support\MessageBag
+ */
 class ViewErrorBag implements Countable
 {
     /**
@@ -61,10 +64,21 @@ class ViewErrorBag implements Countable
     }
 
     /**
+     * Determine if the default message bag has any messages.
+     *
+     * @return bool
+     */
+    public function any()
+    {
+        return $this->count() > 0;
+    }
+
+    /**
      * Get the number of messages in the default bag.
      *
      * @return int
      */
+    #[\ReturnTypeWillChange]
     public function count()
     {
         return $this->getBag('default')->count();
@@ -103,5 +117,15 @@ class ViewErrorBag implements Countable
     public function __set($key, $value)
     {
         $this->put($key, $value);
+    }
+
+    /**
+     * Convert the default bag to its string representation.
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        return (string) $this->getBag('default');
     }
 }

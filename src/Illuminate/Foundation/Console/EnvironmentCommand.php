@@ -14,6 +14,15 @@ class EnvironmentCommand extends Command
     protected $name = 'env';
 
     /**
+     * The name of the console command.
+     *
+     * This name is used to identify the command during lazy loading.
+     *
+     * @var string|null
+     */
+    protected static $defaultName = 'env';
+
+    /**
      * The console command description.
      *
      * @var string
@@ -25,7 +34,7 @@ class EnvironmentCommand extends Command
      *
      * @return void
      */
-    public function fire()
+    public function handle()
     {
         $this->line('<info>Current application environment:</info> <comment>'.$this->laravel['env'].'</comment>');
     }

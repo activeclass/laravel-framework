@@ -1,8 +1,11 @@
 <?php
 
-use Illuminate\Support\HtmlString;
+namespace Illuminate\Tests\Support;
 
-class SupportHtmlStringTest extends PHPUnit_Framework_TestCase
+use Illuminate\Support\HtmlString;
+use PHPUnit\Framework\TestCase;
+
+class SupportHtmlStringTest extends TestCase
 {
     public function testToHtml()
     {
@@ -16,5 +19,15 @@ class SupportHtmlStringTest extends PHPUnit_Framework_TestCase
         $str = '<h1>foo</h1>';
         $html = new HtmlString('<h1>foo</h1>');
         $this->assertEquals($str, (string) $html);
+    }
+
+    public function testIsEmpty()
+    {
+        $this->assertTrue((new HtmlString(''))->isEmpty());
+    }
+
+    public function testIsNotEmpty()
+    {
+        $this->assertTrue((new HtmlString('foo'))->isNotEmpty());
     }
 }

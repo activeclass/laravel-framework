@@ -1,8 +1,11 @@
 <?php
 
-use Illuminate\Cache\NullStore;
+namespace Illuminate\Tests\Cache;
 
-class CacheNullStoreTest extends PHPUnit_Framework_TestCase
+use Illuminate\Cache\NullStore;
+use PHPUnit\Framework\TestCase;
+
+class CacheNullStoreTest extends TestCase
 {
     public function testItemsCanNotBeCached()
     {
@@ -16,11 +19,18 @@ class CacheNullStoreTest extends PHPUnit_Framework_TestCase
         $store = new NullStore;
 
         $this->assertEquals([
-            'foo'   => null,
-            'bar'   => null,
+            'foo' => null,
+            'bar' => null,
         ], $store->many([
             'foo',
             'bar',
         ]));
+    }
+
+    public function testIncrementAndDecrementReturnFalse()
+    {
+        $store = new NullStore;
+        $this->assertFalse($store->increment('foo'));
+        $this->assertFalse($store->decrement('foo'));
     }
 }

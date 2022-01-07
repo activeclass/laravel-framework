@@ -1,17 +1,20 @@
 <?php
 
-use Illuminate\Translation\MessageSelector;
+namespace Illuminate\Tests\Translation;
 
-class TranslationMessageSelectorTest extends PHPUnit_Framework_TestCase
+use Illuminate\Translation\MessageSelector;
+use PHPUnit\Framework\TestCase;
+
+class TranslationMessageSelectorTest extends TestCase
 {
     /**
      * @dataProvider chooseTestData
      */
     public function testChoose($expected, $id, $number)
     {
-        $selector = new MessageSelector();
+        $selector = new MessageSelector;
 
-        $this->assertEquals($expected, $selector->choose($id, $number));
+        $this->assertEquals($expected, $selector->choose($id, $number, 'en'));
     }
 
     public function chooseTestData()

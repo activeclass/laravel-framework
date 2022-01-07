@@ -15,6 +15,15 @@ class RouteClearCommand extends Command
     protected $name = 'route:clear';
 
     /**
+     * The name of the console command.
+     *
+     * This name is used to identify the command during lazy loading.
+     *
+     * @var string|null
+     */
+    protected static $defaultName = 'route:clear';
+
+    /**
      * The console command description.
      *
      * @var string
@@ -46,7 +55,7 @@ class RouteClearCommand extends Command
      *
      * @return void
      */
-    public function fire()
+    public function handle()
     {
         $this->files->delete($this->laravel->getCachedRoutesPath());
 

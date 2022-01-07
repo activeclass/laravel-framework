@@ -1,8 +1,11 @@
 <?php
 
-use Illuminate\Support\NamespacedItemResolver;
+namespace Illuminate\Tests\Support;
 
-class SupportNamespacedItemResolverTest extends PHPUnit_Framework_TestCase
+use Illuminate\Support\NamespacedItemResolver;
+use PHPUnit\Framework\TestCase;
+
+class SupportNamespacedItemResolverTest extends TestCase
 {
     public function testResolution()
     {
@@ -16,11 +19,24 @@ class SupportNamespacedItemResolverTest extends PHPUnit_Framework_TestCase
 
     public function testParsedItemsAreCached()
     {
-        $r = $this->getMockBuilder('Illuminate\Support\NamespacedItemResolver')->setMethods(['parseBasicSegments', 'parseNamespacedSegments'])->getMock();
+        $r = $this->getMockBuilder(NamespacedItemResolver::class)->onlyMethods(['parseBasicSegments', 'parseNamespacedSegments'])->getMock();
         $r->setParsedKey('foo.bar', ['foo']);
         $r->expects($this->never())->method('parseBasicSegments');
         $r->expects($this->never())->method('parseNamespacedSegments');
 
         $this->assertEquals(['foo'], $r->parseKey('foo.bar'));
+    }
+
+    public function testParsedItemsMayBeFlushed()
+    {
+        $r = $this->getMockBuilder(NamespacedItemResolver::class)->onlyMethods(['parseBasicSegments', 'parseNamespacedSegments'])->getMock();
+        $r->expects($this->once())->method('parseBasicSegments')->will(
+            $this->returnValue(['bar'])
+        );
+
+        $r->setParsedKey('foo.bar', ['foo']);
+        $r->flushParsedKeys();
+
+        $this->assertEquals(['bar'], $r->parseKey('foo.bar'));
     }
 }

@@ -1,26 +1,33 @@
 <?php
 
-use Mockery as m;
-use Illuminate\Foundation\Application;
-use Illuminate\Database\Migrations\Migrator;
-use Illuminate\Database\Console\Migrations\ResetCommand;
+namespace Illuminate\Tests\Database;
+
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Console\Migrations\MigrateCommand;
 use Illuminate\Database\Console\Migrations\RefreshCommand;
+use Illuminate\Database\Console\Migrations\ResetCommand;
 use Illuminate\Database\Console\Migrations\RollbackCommand;
+use Illuminate\Database\Events\DatabaseRefreshed;
+use Illuminate\Foundation\Application;
+use Mockery as m;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Application as ConsoleApplication;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\NullOutput;
 
-class DatabaseMigrationRefreshCommandTest extends PHPUnit_Framework_TestCase
+class DatabaseMigrationRefreshCommandTest extends TestCase
 {
-    public function tearDown()
+    protected function tearDown(): void
     {
         m::close();
     }
 
     public function testRefreshCommandCallsCommandsWithProperArguments()
     {
-        $command = new RefreshCommand($migrator = m::mock(Migrator::class));
+        $command = new RefreshCommand;
 
         $app = new ApplicationDatabaseRefreshStub(['path.database' => __DIR__]);
+        $dispatcher = $app->instance(Dispatcher::class, $events = m::mock());
         $console = m::mock(ConsoleApplication::class)->makePartial();
         $console->__construct();
         $command->setLaravel($app);
@@ -31,18 +38,21 @@ class DatabaseMigrationRefreshCommandTest extends PHPUnit_Framework_TestCase
 
         $console->shouldReceive('find')->with('migrate:reset')->andReturn($resetCommand);
         $console->shouldReceive('find')->with('migrate')->andReturn($migrateCommand);
+        $dispatcher->shouldReceive('dispatch')->once()->with(m::type(DatabaseRefreshed::class));
 
-        $resetCommand->shouldReceive('run')->with(new InputMatcher("--database --force --path 'migrate:reset'"), m::any());
-        $migrateCommand->shouldReceive('run')->with(new InputMatcher('--database --force --path migrate'), m::any());
+        $quote = DIRECTORY_SEPARATOR === '\\' ? '"' : "'";
+        $resetCommand->shouldReceive('run')->with(new InputMatcher("--force=1 {$quote}migrate:reset{$quote}"), m::any());
+        $migrateCommand->shouldReceive('run')->with(new InputMatcher('--force=1 migrate'), m::any());
 
         $this->runCommand($command);
     }
 
     public function testRefreshCommandCallsCommandsWithStep()
     {
-        $command = new RefreshCommand($migrator = m::mock(Migrator::class));
+        $command = new RefreshCommand;
 
         $app = new ApplicationDatabaseRefreshStub(['path.database' => __DIR__]);
+        $dispatcher = $app->instance(Dispatcher::class, $events = m::mock());
         $console = m::mock(ConsoleApplication::class)->makePartial();
         $console->__construct();
         $command->setLaravel($app);
@@ -53,16 +63,18 @@ class DatabaseMigrationRefreshCommandTest extends PHPUnit_Framework_TestCase
 
         $console->shouldReceive('find')->with('migrate:rollback')->andReturn($rollbackCommand);
         $console->shouldReceive('find')->with('migrate')->andReturn($migrateCommand);
+        $dispatcher->shouldReceive('dispatch')->once()->with(m::type(DatabaseRefreshed::class));
 
-        $rollbackCommand->shouldReceive('run')->with(new InputMatcher("--database --force --path --step=2 'migrate:rollback'"), m::any());
-        $migrateCommand->shouldReceive('run')->with(new InputMatcher('--database --force --path migrate'), m::any());
+        $quote = DIRECTORY_SEPARATOR === '\\' ? '"' : "'";
+        $rollbackCommand->shouldReceive('run')->with(new InputMatcher("--step=2 --force=1 {$quote}migrate:rollback{$quote}"), m::any());
+        $migrateCommand->shouldReceive('run')->with(new InputMatcher('--force=1 migrate'), m::any());
 
         $this->runCommand($command, ['--step' => 2]);
     }
 
     protected function runCommand($command, $input = [])
     {
-        return $command->run(new Symfony\Component\Console\Input\ArrayInput($input), new Symfony\Component\Console\Output\NullOutput);
+        return $command->run(new ArrayInput($input), new NullOutput);
     }
 }
 
@@ -92,7 +104,7 @@ class ApplicationDatabaseRefreshStub extends Application
         }
     }
 
-    public function environment()
+    public function environment(...$environments)
     {
         return 'development';
     }

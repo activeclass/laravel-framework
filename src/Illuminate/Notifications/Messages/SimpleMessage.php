@@ -2,6 +2,7 @@
 
 namespace Illuminate\Notifications\Messages;
 
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Notifications\Action;
 
 class SimpleMessage
@@ -23,9 +24,16 @@ class SimpleMessage
     /**
      * The notification's greeting.
      *
-     * @var string|null
+     * @var string
      */
-    public $greeting = null;
+    public $greeting;
+
+    /**
+     * The notification's salutation.
+     *
+     * @var string
+     */
+    public $salutation;
 
     /**
      * The "intro" lines of the notification.
@@ -54,6 +62,13 @@ class SimpleMessage
      * @var string
      */
     public $actionUrl;
+
+    /**
+     * The name of the mailer that should send the notification.
+     *
+     * @var string
+     */
+    public $mailer;
 
     /**
      * Indicate that the notification gives information about a successful operation.
@@ -119,9 +134,22 @@ class SimpleMessage
     }
 
     /**
+     * Set the salutation of the notification.
+     *
+     * @param  string  $salutation
+     * @return $this
+     */
+    public function salutation($salutation)
+    {
+        $this->salutation = $salutation;
+
+        return $this;
+    }
+
+    /**
      * Add a line of text to the notification.
      *
-     * @param  \Illuminate\Notifications\Action|string  $line
+     * @param  mixed  $line
      * @return $this
      */
     public function line($line)
@@ -130,9 +158,24 @@ class SimpleMessage
     }
 
     /**
+     * Add lines of text to the notification.
+     *
+     * @param  iterable  $lines
+     * @return $this
+     */
+    public function lines($lines)
+    {
+        foreach ($lines as $line) {
+            $this->line($line);
+        }
+
+        return $this;
+    }
+
+    /**
      * Add a line of text to the notification.
      *
-     * @param  \Illuminate\Notifications\Action|string|array  $line
+     * @param  mixed  $line
      * @return $this
      */
     public function with($line)
@@ -151,16 +194,20 @@ class SimpleMessage
     /**
      * Format the given line of text.
      *
-     * @param  string|array  $line
-     * @return string
+     * @param  \Illuminate\Contracts\Support\Htmlable|string|array  $line
+     * @return \Illuminate\Contracts\Support\Htmlable|string
      */
     protected function formatLine($line)
     {
+        if ($line instanceof Htmlable) {
+            return $line;
+        }
+
         if (is_array($line)) {
             return implode(' ', array_map('trim', $line));
         }
 
-        return trim(implode(' ', array_map('trim', preg_split('/\\r\\n|\\r|\\n/', $line))));
+        return trim(implode(' ', array_map('trim', preg_split('/\\r\\n|\\r|\\n/', $line ?? ''))));
     }
 
     /**
@@ -179,6 +226,19 @@ class SimpleMessage
     }
 
     /**
+     * Set the name of the mailer that should send the notification.
+     *
+     * @param  string  $mailer
+     * @return $this
+     */
+    public function mailer($mailer)
+    {
+        $this->mailer = $mailer;
+
+        return $this;
+    }
+
+    /**
      * Get an array representation of the message.
      *
      * @return array
@@ -189,10 +249,12 @@ class SimpleMessage
             'level' => $this->level,
             'subject' => $this->subject,
             'greeting' => $this->greeting,
+            'salutation' => $this->salutation,
             'introLines' => $this->introLines,
             'outroLines' => $this->outroLines,
             'actionText' => $this->actionText,
             'actionUrl' => $this->actionUrl,
+            'displayableActionUrl' => str_replace(['mailto:', 'tel:'], '', $this->actionUrl ?? ''),
         ];
     }
 }

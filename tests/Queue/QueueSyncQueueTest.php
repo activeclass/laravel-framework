@@ -1,24 +1,38 @@
 <?php
 
-use Mockery as m;
+namespace Illuminate\Tests\Queue;
 
-class QueueSyncQueueTest extends PHPUnit_Framework_TestCase
+use Exception;
+use Illuminate\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Queue\QueueableEntity;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Jobs\SyncJob;
+use Illuminate\Queue\SyncQueue;
+use LogicException;
+use Mockery as m;
+use PHPUnit\Framework\TestCase;
+
+class QueueSyncQueueTest extends TestCase
 {
-    public function tearDown()
+    protected function tearDown(): void
     {
         m::close();
+
+        Container::setInstance(null);
     }
 
     public function testPushShouldFireJobInstantly()
     {
         unset($_SERVER['__sync.test']);
 
-        $sync = new Illuminate\Queue\SyncQueue;
-        $container = new Illuminate\Container\Container;
+        $sync = new SyncQueue;
+        $container = new Container;
         $sync->setContainer($container);
 
-        $sync->push('SyncQueueTestHandler', ['foo' => 'bar']);
-        $this->assertInstanceOf('Illuminate\Queue\Jobs\SyncJob', $_SERVER['__sync.test'][0]);
+        $sync->push(SyncQueueTestHandler::class, ['foo' => 'bar']);
+        $this->assertInstanceOf(SyncJob::class, $_SERVER['__sync.test'][0]);
         $this->assertEquals(['foo' => 'bar'], $_SERVER['__sync.test'][1]);
     }
 
@@ -26,26 +40,60 @@ class QueueSyncQueueTest extends PHPUnit_Framework_TestCase
     {
         unset($_SERVER['__sync.failed']);
 
-        $sync = new Illuminate\Queue\SyncQueue;
-        $container = new Illuminate\Container\Container;
-        $events = m::mock('Illuminate\Contracts\Events\Dispatcher');
-        $events->shouldReceive('fire')->times(3);
+        $sync = new SyncQueue;
+        $container = new Container;
+        Container::setInstance($container);
+        $events = m::mock(Dispatcher::class);
+        $events->shouldReceive('dispatch')->times(3);
         $container->instance('events', $events);
+        $container->instance(Dispatcher::class, $events);
         $sync->setContainer($container);
 
         try {
-            $sync->push('FailingSyncQueueTestHandler', ['foo' => 'bar']);
+            $sync->push(FailingSyncQueueTestHandler::class, ['foo' => 'bar']);
         } catch (Exception $e) {
             $this->assertTrue($_SERVER['__sync.failed']);
+        }
+
+        Container::setInstance();
+    }
+
+    public function testCreatesPayloadObject()
+    {
+        $sync = new SyncQueue;
+        $container = new Container;
+        $container->bind(\Illuminate\Contracts\Events\Dispatcher::class, \Illuminate\Events\Dispatcher::class);
+        $container->bind(\Illuminate\Contracts\Bus\Dispatcher::class, \Illuminate\Bus\Dispatcher::class);
+        $container->bind(\Illuminate\Contracts\Container\Container::class, \Illuminate\Container\Container::class);
+        $sync->setContainer($container);
+
+        SyncQueue::createPayloadUsing(function ($connection, $queue, $payload) {
+            return ['data' => ['extra' => 'extraValue']];
+        });
+
+        try {
+            $sync->push(new SyncQueueJob());
+        } catch (LogicException $e) {
+            $this->assertEquals('extraValue', $e->getMessage());
         }
     }
 }
 
-class SyncQueueTestEntity implements Illuminate\Contracts\Queue\QueueableEntity
+class SyncQueueTestEntity implements QueueableEntity
 {
     public function getQueueableId()
     {
         return 1;
+    }
+
+    public function getQueueableConnection()
+    {
+        //
+    }
+
+    public function getQueueableRelations()
+    {
+        //
     }
 }
 
@@ -61,11 +109,28 @@ class FailingSyncQueueTestHandler
 {
     public function fire($job, $data)
     {
-        throw new Exception();
+        throw new Exception;
     }
 
     public function failed()
     {
         $_SERVER['__sync.failed'] = true;
+    }
+}
+
+class SyncQueueJob implements ShouldQueue
+{
+    use InteractsWithQueue;
+
+    public function handle()
+    {
+        throw new LogicException($this->getValueFromJob('extra'));
+    }
+
+    public function getValueFromJob($key)
+    {
+        $payload = $this->job->payload();
+
+        return $payload['data'][$key] ?? null;
     }
 }

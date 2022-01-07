@@ -1,22 +1,48 @@
 <?php
 
-use Mockery as m;
-use Illuminate\Console\Scheduling\Schedule;
+namespace Illuminate\Tests\Console;
 
-class ConsoleEventSchedulerTest extends PHPUnit_Framework_TestCase
+use Illuminate\Console\Command;
+use Illuminate\Console\Scheduling\CacheEventMutex;
+use Illuminate\Console\Scheduling\CacheSchedulingMutex;
+use Illuminate\Console\Scheduling\EventMutex;
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Console\Scheduling\SchedulingMutex;
+use Illuminate\Container\Container;
+use Mockery as m;
+use PHPUnit\Framework\TestCase;
+
+class ConsoleEventSchedulerTest extends TestCase
 {
-    public function setUp()
+    /**
+     * @var \Illuminate\Console\Scheduling\Schedule
+     */
+    private $schedule;
+
+    protected function setUp(): void
     {
         parent::setUp();
 
-        \Illuminate\Container\Container::getInstance()->instance(
-            'Illuminate\Console\Scheduling\Schedule', $this->schedule = new Schedule(m::mock('Illuminate\Contracts\Cache\Repository'))
-        );
+        $container = Container::getInstance();
+
+        $container->instance(EventMutex::class, m::mock(CacheEventMutex::class));
+
+        $container->instance(SchedulingMutex::class, m::mock(CacheSchedulingMutex::class));
+
+        $container->instance(Schedule::class, $this->schedule = new Schedule(m::mock(EventMutex::class)));
     }
 
-    public function tearDown()
+    protected function tearDown(): void
     {
         m::close();
+    }
+
+    public function testMutexCanReceiveCustomStore()
+    {
+        Container::getInstance()->make(EventMutex::class)->shouldReceive('useStore')->once()->with('test');
+        Container::getInstance()->make(SchedulingMutex::class)->shouldReceive('useStore')->once()->with('test');
+
+        $this->schedule->useCache('test');
     }
 
     public function testExecCreatesNewCommand()
@@ -33,16 +59,35 @@ class ConsoleEventSchedulerTest extends PHPUnit_Framework_TestCase
         $schedule->exec('path/to/command', ['--title' => 'A "real" test']);
         $schedule->exec('path/to/command', [['one', 'two']]);
         $schedule->exec('path/to/command', ['-1 minute']);
+        $schedule->exec('path/to/command', ['foo' => ['bar', 'baz']]);
+        $schedule->exec('path/to/command', ['--foo' => ['bar', 'baz']]);
+        $schedule->exec('path/to/command', ['-F' => ['bar', 'baz']]);
 
         $events = $schedule->events();
-        $this->assertEquals('path/to/command', $events[0]->command);
-        $this->assertEquals('path/to/command -f --foo="bar"', $events[1]->command);
-        $this->assertEquals('path/to/command -f', $events[2]->command);
-        $this->assertEquals("path/to/command --foo={$escape}bar{$escape}", $events[3]->command);
-        $this->assertEquals("path/to/command -f --foo={$escape}bar{$escape}", $events[4]->command);
-        $this->assertEquals("path/to/command --title={$escape}A {$escapeReal}real{$escapeReal} test{$escape}", $events[5]->command);
-        $this->assertEquals("path/to/command {$escape}one{$escape} {$escape}two{$escape}", $events[6]->command);
-        $this->assertEquals("path/to/command {$escape}-1 minute{$escape}", $events[7]->command);
+        $this->assertSame('path/to/command', $events[0]->command);
+        $this->assertSame('path/to/command -f --foo="bar"', $events[1]->command);
+        $this->assertSame('path/to/command -f', $events[2]->command);
+        $this->assertSame("path/to/command --foo={$escape}bar{$escape}", $events[3]->command);
+        $this->assertSame("path/to/command -f --foo={$escape}bar{$escape}", $events[4]->command);
+        $this->assertSame("path/to/command --title={$escape}A {$escapeReal}real{$escapeReal} test{$escape}", $events[5]->command);
+        $this->assertSame("path/to/command {$escape}one{$escape} {$escape}two{$escape}", $events[6]->command);
+        $this->assertSame("path/to/command {$escape}-1 minute{$escape}", $events[7]->command);
+        $this->assertSame("path/to/command {$escape}bar{$escape} {$escape}baz{$escape}", $events[8]->command);
+        $this->assertSame("path/to/command --foo={$escape}bar{$escape} --foo={$escape}baz{$escape}", $events[9]->command);
+        $this->assertSame("path/to/command -F {$escape}bar{$escape} -F {$escape}baz{$escape}", $events[10]->command);
+    }
+
+    public function testExecCreatesNewCommandWithTimezone()
+    {
+        $schedule = new Schedule('UTC');
+        $schedule->exec('path/to/command');
+        $events = $schedule->events();
+        $this->assertSame('UTC', $events[0]->timezone);
+
+        $schedule = new Schedule('Asia/Tokyo');
+        $schedule->exec('path/to/command');
+        $events = $schedule->events();
+        $this->assertSame('Asia/Tokyo', $events[0]->timezone);
     }
 
     public function testCommandCreatesNewArtisanCommand()
@@ -56,9 +101,10 @@ class ConsoleEventSchedulerTest extends PHPUnit_Framework_TestCase
 
         $events = $schedule->events();
         $binary = $escape.PHP_BINARY.$escape;
-        $this->assertEquals($binary.' artisan queue:listen', $events[0]->command);
-        $this->assertEquals($binary.' artisan queue:listen --tries=3', $events[1]->command);
-        $this->assertEquals($binary.' artisan queue:listen --tries=3', $events[2]->command);
+        $artisan = $escape.'artisan'.$escape;
+        $this->assertEquals($binary.' '.$artisan.' queue:listen', $events[0]->command);
+        $this->assertEquals($binary.' '.$artisan.' queue:listen --tries=3', $events[1]->command);
+        $this->assertEquals($binary.' '.$artisan.' queue:listen --tries=3', $events[2]->command);
     }
 
     public function testCreateNewArtisanCommandUsingCommandClass()
@@ -70,7 +116,21 @@ class ConsoleEventSchedulerTest extends PHPUnit_Framework_TestCase
 
         $events = $schedule->events();
         $binary = $escape.PHP_BINARY.$escape;
-        $this->assertEquals($binary.' artisan foo:bar --force', $events[0]->command);
+        $artisan = $escape.'artisan'.$escape;
+        $this->assertEquals($binary.' '.$artisan.' foo:bar --force', $events[0]->command);
+    }
+
+    public function testCallCreatesNewJobWithTimezone()
+    {
+        $schedule = new Schedule('UTC');
+        $schedule->call('path/to/command');
+        $events = $schedule->events();
+        $this->assertSame('UTC', $events[0]->timezone);
+
+        $schedule = new Schedule('Asia/Tokyo');
+        $schedule->call('path/to/command');
+        $events = $schedule->events();
+        $this->assertSame('Asia/Tokyo', $events[0]->timezone);
     }
 }
 
@@ -84,7 +144,7 @@ class FooClassStub
     }
 }
 
-class ConsoleCommandStub extends Illuminate\Console\Command
+class ConsoleCommandStub extends Command
 {
     protected $signature = 'foo:bar';
 
