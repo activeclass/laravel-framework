@@ -67,7 +67,8 @@
         "illuminate/support": "self.version",
         "illuminate/translation": "self.version",
         "illuminate/validation": "self.version",
-        "illuminate/view": "self.version"
+        "illuminate/view": "self.version",
+        "laravel/framework": "self.version"
     },
     "conflict": {
         "tightenco/collect": "<5.5.33"
