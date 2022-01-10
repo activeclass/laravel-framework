@@ -956,7 +956,7 @@ class Blueprint
      * @param  int  $precision
      * @return \Illuminate\Database\Schema\ColumnDefinition
      */
-    public function timestamp($column, $precision = 0)
+    public function timestamp($column, $precision = 6)
     {
         return $this->addColumn('timestamp', $column, compact('precision'));
     }

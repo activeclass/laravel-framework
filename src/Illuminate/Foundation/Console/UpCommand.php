@@ -36,6 +36,7 @@ class UpCommand extends Command
             }
 
             unlink(storage_path('framework/down'));
+            $this->laravel->events->fire('artisan.up');
 
             $this->info('Application is now live.');
         } catch (Exception $e) {
