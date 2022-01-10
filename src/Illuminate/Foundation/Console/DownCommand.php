@@ -37,6 +37,7 @@ class DownCommand extends Command
             file_put_contents(storage_path('framework/down'),
                               json_encode($this->getDownFilePayload(),
                               JSON_PRETTY_PRINT));
+            $this->laravel->events->dispatch('artisan.down');
 
             $this->comment('Application is now in maintenance mode.');
         } catch (Exception $e) {
