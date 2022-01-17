@@ -1240,6 +1240,7 @@ class Application extends Container implements ApplicationContract, HttpKernelIn
         $this->terminatingCallbacks = [];
         $this->afterResolvingCallbacks = [];
         $this->globalResolvingCallbacks = [];
+        $this->middlewares = [];
     }
 
     /**
