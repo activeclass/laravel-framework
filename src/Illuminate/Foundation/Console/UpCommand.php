@@ -37,6 +37,8 @@ class UpCommand extends Command
 
             unlink(storage_path('framework/down'));
 
+            $this->laravel->events->dispatch('artisan.up');
+
             $this->info('Application is now live.');
         } catch (Exception $e) {
             $this->error('Failed to disable maintenance mode.');

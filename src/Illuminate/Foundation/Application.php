@@ -1299,6 +1299,7 @@ class Application extends Container implements ApplicationContract, CachesConfig
         $this->terminatingCallbacks = [];
         $this->afterResolvingCallbacks = [];
         $this->globalResolvingCallbacks = [];
+        $this->middlewares = [];
     }
 
     /**
